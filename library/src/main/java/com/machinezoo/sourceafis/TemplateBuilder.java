@@ -5,9 +5,6 @@ import android.graphics.BitmapFactory;
 
 import com.google.gson.Gson;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -31,7 +28,6 @@ import java8.util.stream.RefStreams;
 import java8.util.stream.StreamSupport;
 
 class TemplateBuilder {
-	private static final Logger logger = LoggerFactory.getLogger(TemplateBuilder.class);
 	FingerprintTransparency transparency = FingerprintTransparency.none;
 	Cell size;
 	Minutia[] minutiae;
