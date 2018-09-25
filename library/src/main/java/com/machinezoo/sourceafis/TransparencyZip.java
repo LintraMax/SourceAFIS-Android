@@ -30,7 +30,7 @@ class TransparencyZip extends FingerprintTransparency {
 	@Override
 	protected void log(final String keyword, final Map<String, Supplier<ByteBuffer>> data) {
 		Exceptions.sneak().run(() -> {
-			List<String> suffixes = StreamSupport.stream(data.keySet())
+			List<String> suffixes = (List<String>) StreamSupport.stream(data.keySet())
 					.sorted(Comparators.comparing((Function<String, Comparable>) ext -> {
 						if (ext.equals(".json"))
 							return 1;
