@@ -149,6 +149,7 @@ class TemplateBuilder {
 			int extra = in.readUnsignedShort();
 			// variable-length extra data section
 			in.skipBytes(extra);
+			minutiae = StreamSupport.stream(list).toArray(Minutia[]::new);
 			transparency.logIsoMinutiae(this);
 		} catch (IOException e) {
 			throw new IllegalArgumentException("Invalid ISO 19794-2 template", e);
