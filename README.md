@@ -6,7 +6,7 @@ Ported from https://sourceafis.machinezoo.com/ to run on Android. This is versio
 
 You can get the latest build from Jitpack Maven repository.
 
-```
+```gradle
    allprojects {
         repositories {
             jcenter()
