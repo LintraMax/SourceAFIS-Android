@@ -1,6 +1,8 @@
 // Part of SourceAFIS: https://sourceafis.machinezoo.com
 package com.machinezoo.sourceafis;
 
+// src: import static java.util.stream.Collectors.*;
+// src: import java.util.*;
 import java.util.List;
 
 import java8.util.J8Arrays;
@@ -14,6 +16,7 @@ class JsonPair {
 		this.candidate = candidate;
 	}
 	static List<JsonPair> roots(int count, MinutiaPair[] roots) {
+		// src: return Arrays.stream(roots).limit(count).map(p -> new JsonPair(p.probe, p.candidate)).collect(toList());
 		return J8Arrays.stream(roots).limit(count).map(p -> new JsonPair(p.probe, p.candidate)).collect(Collectors.toList());
 	}
 }

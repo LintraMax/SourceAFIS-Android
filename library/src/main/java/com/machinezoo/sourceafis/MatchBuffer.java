@@ -4,23 +4,16 @@ package com.machinezoo.sourceafis;
 import java.util.*;
 import gnu.trove.map.hash.*;
 import gnu.trove.set.hash.*;
-import java8.util.Comparators;
-import java8.util.function.Function;
 
 class MatchBuffer {
-	private static final ThreadLocal<MatchBuffer> local = new ThreadLocal<MatchBuffer>() {
-		@Override
-		protected MatchBuffer initialValue() {
-			return new MatchBuffer();
-		}
-	};
+	private static final ThreadLocal<MatchBuffer> local = ThreadLocal.withInitial(MatchBuffer::new);
 	FingerprintTransparency transparency = FingerprintTransparency.none;
 	ImmutableTemplate probe;
 	private TIntObjectHashMap<List<IndexedEdge>> edgeHash;
 	ImmutableTemplate candidate;
 	private MinutiaPair[] pool = new MinutiaPair[1];
 	private int pooled;
-	private PriorityQueue<MinutiaPair> queue = new PriorityQueue<>(5, Comparators.comparing((Function<MinutiaPair, Comparable>) p -> p.distance));
+	private PriorityQueue<MinutiaPair> queue = new PriorityQueue<>(Comparator.comparing(p -> p.distance));
 	int count;
 	MinutiaPair[] tree;
 	private MinutiaPair[] byProbe;

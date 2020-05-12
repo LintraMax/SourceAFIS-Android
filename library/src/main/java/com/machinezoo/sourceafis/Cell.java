@@ -83,6 +83,7 @@ class Cell implements Iterable<Cell> {
 		return 8;
 	}
 	private List<Object> fields() {
+		// src: return Arrays.asList(x, y);
 		return (List<Object>) (List<?>) Arrays.asList(x, y);
 	}
 	@Override public boolean equals(Object obj) {

@@ -452,8 +452,9 @@ class TemplateBuilder {
 					double angle = random.next() * Math.PI;
 					double distance = Doubles.interpolateExponential(Parameters.minOrientationRadius, Parameters.maxOrientationRadius, random.next());
 					sample.offset = Angle.toVector(angle).multiply(distance).round();
-				} while (sample.offset.equals(Cell.zero) || sample.offset.y < 0 ||
-						J8Arrays.stream(orientations).limit(j).anyMatch(o -> o.offset.equals(sample.offset)));
+				
+				// src: } while (sample.offset.equals(Cell.zero) || sample.offset.y < 0 || Arrays.stream(orientations).limit(j).anyMatch(o -> o.offset.equals(sample.offset)));
+				} while (sample.offset.equals(Cell.zero) || sample.offset.y < 0 || J8Arrays.stream(orientations).limit(j).anyMatch(o -> o.offset.equals(sample.offset)));
 				sample.orientation = Angle.toVector(Angle.add(Angle.toOrientation(Angle.atan(sample.offset.toPoint())), Math.PI));
 			}
 		}
@@ -668,6 +669,14 @@ class TemplateBuilder {
 		return shrunk;
 	}
 	private void collectMinutiae(Skeleton skeleton, MinutiaType type) {
+		/* src:
+		minutiae = Stream.concat(
+			Arrays.stream(Optional.ofNullable(minutiae).orElse(new Minutia[0])),
+			skeleton.minutiae.stream()
+				.filter(m -> m.ridges.size() == 1)
+				.map(m -> new Minutia(m.position, m.ridges.get(0).direction(), type)))
+			.toArray(Minutia[]::new);
+		*/
 		minutiae = RefStreams.concat(
 				J8Arrays.stream(java8.util.Optional.ofNullable(minutiae).orElse(new Minutia[0])),
 				StreamSupport.stream(skeleton.minutiae)
@@ -676,6 +685,14 @@ class TemplateBuilder {
 				.toArray(Minutia[]::new);
 	}
 	private void maskMinutiae(BooleanMap mask) {
+		/* src:
+		minutiae = Arrays.stream(minutiae)
+			.filter(minutia -> {
+				Cell arrow = Angle.toVector(minutia.direction).multiply(-Parameters.maskDisplacement).round();
+				return mask.get(minutia.position.plus(arrow), false);
+			})
+			.toArray(Minutia[]::new);
+		*/
 		minutiae = J8Arrays.stream(minutiae)
 				.filter(minutia -> {
 					Cell arrow = Angle.toVector(minutia.direction).multiply(-Parameters
@@ -683,11 +700,23 @@ class TemplateBuilder {
 					return mask.get(minutia.position.plus(arrow), false);
 				})
 				.toArray(Minutia[]::new);
+				
 		// https://sourceafis.machinezoo.com/transparency/inner-minutiae
 		transparency.logInnerMinutiae(this);
 	}
 	private void removeMinutiaClouds() {
 		int radiusSq = Integers.sq(Parameters.minutiaCloudRadius);
+		
+		/* src:
+		Set<Minutia> removed = Arrays.stream(minutiae)
+			.filter(minutia -> Parameters.maxCloudSize < Arrays.stream(minutiae)
+				.filter(neighbor -> neighbor.position.minus(minutia.position).lengthSq() <= radiusSq)
+				.count() - 1)
+			.collect(toSet());
+		minutiae = Arrays.stream(minutiae)
+			.filter(minutia -> !removed.contains(minutia))
+			.toArray(Minutia[]::new);
+		*/
 		final Set<Minutia> removed = J8Arrays.stream(minutiae)
 				.filter(minutia -> Parameters.maxCloudSize < J8Arrays.stream(minutiae)
 						.filter(neighbor -> neighbor.position.minus(minutia.position)
@@ -703,6 +732,18 @@ class TemplateBuilder {
 	}
 	private void limitTemplateSize() {
 		if (minutiae.length > Parameters.maxMinutiae) {
+			/* src:
+			minutiae = Arrays.stream(minutiae)
+				.sorted(Comparator.<Minutia>comparingInt(
+					minutia -> Arrays.stream(minutiae)
+						.mapToInt(neighbor -> minutia.position.minus(neighbor.position).lengthSq())
+						.sorted()
+						.skip(Parameters.sortByNeighbor)
+						.findFirst().orElse(Integer.MAX_VALUE))
+					.reversed())
+				.limit(Parameters.maxMinutiae)
+				.toArray(Minutia[]::new);
+			*/
 			List<Minutia> sorted = J8Arrays.stream(minutiae)
 					.sorted(Comparators.comparingInt(
 							minutia -> J8Arrays.stream(minutiae)
@@ -718,6 +759,15 @@ class TemplateBuilder {
 		transparency.logTopMinutiae(this);
 	}
 	private void shuffleMinutiae() {
+		/* src:
+		int prime = 1610612741;
+		Arrays.sort(minutiae, Comparator
+			.comparing((Minutia m) -> ((m.position.x * prime) + m.position.y) * prime)
+			.thenComparing(m -> m.position.x)
+			.thenComparing(m -> m.position.y)
+			.thenComparing(m -> m.direction)
+			.thenComparing(m -> m.type));
+		*/
 		int seed = 0;
 		for (Minutia minutia : minutiae)
 			seed += minutia.direction + minutia.position.x + minutia.position.y + minutia.type
@@ -735,8 +785,7 @@ class TemplateBuilder {
 			int sqMaxDistance = Integers.sq(Parameters.edgeTableRange);
 			if (minutiae.length - 1 > Parameters.edgeTableNeighbors) {
 				for (int neighbor = 0; neighbor < minutiae.length; ++neighbor)
-					allSqDistances[neighbor] = referencePosition.minus(minutiae[neighbor]
-							.position).lengthSq();
+					allSqDistances[neighbor] = referencePosition.minus(minutiae[neighbor].position).lengthSq();
 				Arrays.sort(allSqDistances);
 				sqMaxDistance = allSqDistances[Parameters.edgeTableNeighbors];
 			}
@@ -744,9 +793,12 @@ class TemplateBuilder {
 				if (neighbor != reference && referencePosition.minus(minutiae[neighbor].position).lengthSq() <= sqMaxDistance)
 					star.add(new NeighborEdge(minutiae, reference, neighbor));
 			}
+			
+			// src: tar.sort(Comparator.<NeighborEdge>comparingInt(e -> e.length).thenComparingInt(e -> e.neighbor));
 			Comparator<NeighborEdge> left = Comparators.comparingInt(e -> e.length);
 			Comparator<NeighborEdge> right = Comparators.comparingInt(e -> e.neighbor);
 			Lists.sort(star, Comparators.thenComparing(left, right));
+			
 			while (star.size() > Parameters.edgeTableNeighbors)
 				star.remove(star.size() - 1);
 			edges[reference] = star.toArray(new NeighborEdge[star.size()]);

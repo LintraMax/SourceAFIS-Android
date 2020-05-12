@@ -379,6 +379,7 @@ class Skeleton {
 		return shadow;
 	}
 	ByteBuffer serialize() {
+		// src: ByteBuffer buffer = ByteBuffer.allocate(minutiae.stream().mapToInt(m -> m.serializedSize()).sum());
 		ByteBuffer buffer = ByteBuffer.allocate(StreamSupport.stream(minutiae).mapToInt(m -> m.serializedSize()).sum());
 		for (SkeletonMinutia minutia : minutiae)
 			minutia.write(buffer);

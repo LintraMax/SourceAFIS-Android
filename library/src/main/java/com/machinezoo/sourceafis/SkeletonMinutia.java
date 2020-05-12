@@ -32,6 +32,7 @@ class SkeletonMinutia {
 				ridge.write(buffer);
 	}
 	int serializedSize() {
+		// src: return ridges.stream().filter(r -> r.points instanceof CircularList).mapToInt(r -> r.serializedSize()).sum();
 		return StreamSupport.stream(ridges).filter(r -> r.points instanceof CircularList).mapToInt(SkeletonRidge::serializedSize).sum();
 	}
 	@Override public String toString() {

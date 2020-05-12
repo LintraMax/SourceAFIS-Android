@@ -56,6 +56,7 @@ class Block implements Iterable<Cell> {
 		return new Block(x + delta.x, y + delta.y, width, height);
 	}
 	private List<Object> fields() {
+		// src: return Arrays.asList(x, y, width, height);
 		return (List<Object>) (List<?>) Arrays.asList(x, y, width, height);
 	}
 	@Override public boolean equals(Object obj) {

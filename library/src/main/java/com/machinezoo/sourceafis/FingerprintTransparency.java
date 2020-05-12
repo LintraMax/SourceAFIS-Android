@@ -5,9 +5,10 @@ import java.io.*;
 import java.nio.*;
 import java.nio.charset.*;
 import java.util.*;
+// src: import java.util.function.*;
+import java8.util.function.Supplier;
 import com.google.gson.*;
 import gnu.trove.map.hash.*;
-import java8.util.function.Supplier;
 
 /**
  * Algorithm transparency API that can capture all intermediate data structures produced by SourceAFIS algorithm.
