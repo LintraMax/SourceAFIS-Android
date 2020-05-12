@@ -74,7 +74,7 @@ publishing {
 //            groupId 'com.machinezoo.sourceafis'
 //            artifactId 'SourceAFIS-Android'
             version getVersionName()
-            artifact("$buildDir/outputs/library.aar")
+            artifact("$buildDir/outputs/aar/library.aar")
         }
     }
 }
