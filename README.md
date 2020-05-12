@@ -1,6 +1,6 @@
 # SourceAFIS Port for Android
 
-[SourceAFIS](https://sourceafis.machinezoo.com/) project ported from https://github.com/LintraMax/SourceAFIS-Android to run on Android.
+[SourceAFIS](https://sourceafis.machinezoo.com/) project ported from https://github.com/robertvazan/sourceafis-java to run on Android.
 This is version `3.10.0` of original SourceAFIS Java version.
 
 ## Warning
