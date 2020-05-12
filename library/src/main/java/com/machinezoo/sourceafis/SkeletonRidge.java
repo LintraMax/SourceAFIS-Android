@@ -1,11 +1,10 @@
-// Part of SourceAFIS: https://sourceafis.machinezoo.com
+// Part of SourceAFIS for Java: https://sourceafis.machinezoo.com/java
 package com.machinezoo.sourceafis;
 
-import java.nio.*;
 import java.util.*;
 
 class SkeletonRidge {
-	final List<Cell> points;
+	final List<IntPoint> points;
 	final SkeletonRidge reversed;
 	private SkeletonMinutia startMinutia;
 	private SkeletonMinutia endMinutia;
@@ -47,8 +46,8 @@ class SkeletonRidge {
 		end(null);
 	}
 	double direction() {
-		int first = Parameters.ridgeDirectionSkip;
-		int last = Parameters.ridgeDirectionSkip + Parameters.ridgeDirectionSample - 1;
+		int first = Parameters.RIDGE_DIRECTION_SKIP;
+		int last = Parameters.RIDGE_DIRECTION_SKIP + Parameters.RIDGE_DIRECTION_SAMPLE - 1;
 		if (last >= points.size()) {
 			int shift = last - points.size() + 1;
 			last -= shift;
@@ -56,13 +55,6 @@ class SkeletonRidge {
 		}
 		if (first < 0)
 			first = 0;
-		return Angle.atan(points.get(first), points.get(last));
-	}
-	void write(ByteBuffer buffer) {
-		for (Cell at : points)
-			at.write(buffer);
-	}
-	int serializedSize() {
-		return points.size() * Cell.serializedSize();
+		return DoubleAngle.atan(points.get(first), points.get(last));
 	}
 }

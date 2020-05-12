@@ -1,7 +1,10 @@
 # SourceAFIS Port for Android
 
-Ported from https://sourceafis.machinezoo.com/ to run on Android.
-This is version `3.4.0` of original SourceAFIS Java version.
+[SourceAFIS](https://sourceafis.machinezoo.com/) project ported from https://github.com/LintraMax/SourceAFIS-Android to run on Android.
+This is version `3.10.0` of original SourceAFIS Java version.
+
+## Warning
+`FingerprintImage.java` and `ImageDecoder.java` are not ported due its complexity, and we don't need it.
 
 # Installation
 
@@ -15,6 +18,6 @@ You can get the latest build from Jitpack Maven repository.
         }
    }
    dependencies {
-        implementation 'com.github.LintraMax:SourceAFIS-Android:v3.4.0'
+        implementation 'com.github.LintraMax:SourceAFIS-Android:v3.10.0'
    }
 ```

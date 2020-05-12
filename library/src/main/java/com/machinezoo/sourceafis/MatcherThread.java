@@ -1,32 +1,46 @@
-// Part of SourceAFIS: https://sourceafis.machinezoo.com
+// Part of SourceAFIS for Java: https://sourceafis.machinezoo.com/java
 package com.machinezoo.sourceafis;
 
-import java.util.*;
-import gnu.trove.map.hash.*;
-import gnu.trove.set.hash.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.PriorityQueue;
 
-class MatchBuffer {
-	private static final ThreadLocal<MatchBuffer> local = ThreadLocal.withInitial(MatchBuffer::new);
-	FingerprintTransparency transparency = FingerprintTransparency.none;
+import java8.util.Comparators;
+import it.unimi.dsi.fastutil.ints.*;
+
+class MatcherThread {
+	private static final ThreadLocal<MatcherThread> threads = new ThreadLocal<MatcherThread>() {
+		/*
+		 * ThreadLocal has method withInitial() that is more convenient,
+		 * but that method alone would force whole SourceAFIS to require Android API level 26 instead of 24.
+		 */
+		@Override protected MatcherThread initialValue() {
+			return new MatcherThread();
+		}
+	};
+	private FingerprintTransparency transparency;
 	ImmutableTemplate probe;
-	private TIntObjectHashMap<List<IndexedEdge>> edgeHash;
+	private Int2ObjectMap<List<IndexedEdge>> edgeHash;
 	ImmutableTemplate candidate;
 	private MinutiaPair[] pool = new MinutiaPair[1];
 	private int pooled;
-	private PriorityQueue<MinutiaPair> queue = new PriorityQueue<>(Comparator.comparing(p -> p.distance));
+	private PriorityQueue<MinutiaPair> queue = new PriorityQueue<>(Comparators.comparing(p -> p.distance));
 	int count;
-	MinutiaPair[] tree;
-	private MinutiaPair[] byProbe;
-	private MinutiaPair[] byCandidate;
-	private MinutiaPair[] roots;
-	private final TIntHashSet duplicates = new TIntHashSet();
+	MinutiaPair[] tree = new MinutiaPair[1];
+	private MinutiaPair[] byProbe = new MinutiaPair[1];
+	private MinutiaPair[] byCandidate = new MinutiaPair[1];
+	private MinutiaPair[] roots = new MinutiaPair[1];
+	private final IntSet duplicates = new IntOpenHashSet();
 	private Score score = new Score();
-	static MatchBuffer current() {
-		return local.get();
+	private final List<MinutiaPair> support = new ArrayList<>();
+	private boolean reportSupport;
+	static MatcherThread current() {
+		return threads.get();
 	}
 	void selectMatcher(ImmutableMatcher matcher) {
 		probe = matcher.template;
-		if (tree == null || probe.minutiae.length > tree.length) {
+		if (probe.minutiae.length > tree.length) {
 			tree = new MinutiaPair[probe.minutiae.length];
 			byProbe = new MinutiaPair[probe.minutiae.length];
 		}
@@ -34,11 +48,20 @@ class MatchBuffer {
 	}
 	void selectCandidate(ImmutableTemplate template) {
 		candidate = template;
-		if (byCandidate == null || byCandidate.length < candidate.minutiae.length)
+		if (byCandidate.length < candidate.minutiae.length)
 			byCandidate = new MinutiaPair[candidate.minutiae.length];
 	}
 	double match() {
 		try {
+			/*
+			 * Thread-local storage is fairly fast, but it's still a hash lookup,
+			 * so do not access FingerprintTransparency.current() repeatedly in tight loops.
+			 */
+			transparency = FingerprintTransparency.current();
+			/*
+			 * Collection of support edges is very slow. It must be disabled on matcher level for it to have no performance impact.
+			 */
+			reportSupport = transparency.acceptsPairing();
 			int totalRoots = enumerateRoots();
 			// https://sourceafis.machinezoo.com/transparency/root-pairs
 			transparency.logRootPairs(totalRoots, roots);
@@ -46,7 +69,7 @@ class MatchBuffer {
 			int best = -1;
 			for (int i = 0; i < totalRoots; ++i) {
 				double partial = tryRoot(roots[i]);
-				if (partial > high) {
+				if (best < 0 || partial > high) {
 					high = partial;
 					best = i;
 				}
@@ -56,13 +79,15 @@ class MatchBuffer {
 			transparency.logBestMatch(best);
 			return high;
 		} catch (Throwable e) {
-			local.remove();
+			threads.remove();
 			throw e;
+		} finally {
+			transparency = null;
 		}
 	}
 	private int enumerateRoots() {
-		if (roots == null || roots.length < Parameters.maxTriedRoots)
-			roots = new MinutiaPair[Parameters.maxTriedRoots];
+		if (roots.length < Parameters.MAX_TRIED_ROOTS)
+			roots = new MinutiaPair[Parameters.MAX_TRIED_ROOTS];
 		int totalLookups = 0;
 		int totalRoots = 0;
 		int triedRoots = 0;
@@ -73,14 +98,13 @@ class MatchBuffer {
 					for (int candidateReference = phase; candidateReference < candidate.minutiae.length; candidateReference += period + 1) {
 						int candidateNeighbor = (candidateReference + period) % candidate.minutiae.length;
 						EdgeShape candidateEdge = new EdgeShape(candidate.minutiae[candidateReference], candidate.minutiae[candidateNeighbor]);
-						if ((candidateEdge.length >= Parameters.minRootEdgeLength) ^ shortEdges) {
+						if ((candidateEdge.length >= Parameters.MIN_ROOT_EDGE_LENGTH) ^ shortEdges) {
 							List<IndexedEdge> matches = edgeHash.get(hashShape(candidateEdge));
 							if (matches != null) {
 								for (IndexedEdge match : matches) {
 									if (matchingShapes(match, candidateEdge)) {
 										int duplicateKey = (match.reference << 16) | candidateReference;
-										if (!duplicates.contains(duplicateKey)) {
-											duplicates.add(duplicateKey);
+										if (duplicates.add(duplicateKey)) {
 											MinutiaPair pair = allocate();
 											pair.probe = match.reference;
 											pair.candidate = candidateReference;
@@ -88,13 +112,13 @@ class MatchBuffer {
 											++totalRoots;
 										}
 										++triedRoots;
-										if (triedRoots >= Parameters.maxTriedRoots)
+										if (triedRoots >= Parameters.MAX_TRIED_ROOTS)
 											return totalRoots;
 									}
 								}
 							}
 							++totalLookups;
-							if (totalLookups >= Parameters.maxRootEdgeLookups)
+							if (totalLookups >= Parameters.MAX_ROOT_EDGE_LOOKUPS)
 								return totalRoots;
 						}
 					}
@@ -104,19 +128,19 @@ class MatchBuffer {
 		return totalRoots;
 	}
 	private int hashShape(EdgeShape edge) {
-		int lengthBin = edge.length / Parameters.maxDistanceError;
-		int referenceAngleBin = (int)(edge.referenceAngle / Parameters.maxAngleError);
-		int neighborAngleBin = (int)(edge.neighborAngle / Parameters.maxAngleError);
+		int lengthBin = edge.length / Parameters.MAX_DISTANCE_ERROR;
+		int referenceAngleBin = (int)(edge.referenceAngle / Parameters.MAX_ANGLE_ERROR);
+		int neighborAngleBin = (int)(edge.neighborAngle / Parameters.MAX_ANGLE_ERROR);
 		return (referenceAngleBin << 24) + (neighborAngleBin << 16) + lengthBin;
 	}
 	private boolean matchingShapes(EdgeShape probe, EdgeShape candidate) {
 		int lengthDelta = probe.length - candidate.length;
-		if (lengthDelta >= -Parameters.maxDistanceError && lengthDelta <= Parameters.maxDistanceError) {
-			double complementaryAngleError = Angle.complementary(Parameters.maxAngleError);
-			double referenceDelta = Angle.difference(probe.referenceAngle, candidate.referenceAngle);
-			if (referenceDelta <= Parameters.maxAngleError || referenceDelta >= complementaryAngleError) {
-				double neighborDelta = Angle.difference(probe.neighborAngle, candidate.neighborAngle);
-				if (neighborDelta <= Parameters.maxAngleError || neighborDelta >= complementaryAngleError)
+		if (lengthDelta >= -Parameters.MAX_DISTANCE_ERROR && lengthDelta <= Parameters.MAX_DISTANCE_ERROR) {
+			double complementaryAngleError = DoubleAngle.complementary(Parameters.MAX_ANGLE_ERROR);
+			double referenceDelta = DoubleAngle.difference(probe.referenceAngle, candidate.referenceAngle);
+			if (referenceDelta <= Parameters.MAX_ANGLE_ERROR || referenceDelta >= complementaryAngleError) {
+				double neighborDelta = DoubleAngle.difference(probe.neighborAngle, candidate.neighborAngle);
+				if (neighborDelta <= Parameters.MAX_ANGLE_ERROR || neighborDelta >= complementaryAngleError)
 					return true;
 			}
 		}
@@ -130,7 +154,7 @@ class MatchBuffer {
 			skipPaired();
 		} while (!queue.isEmpty());
 		// https://sourceafis.machinezoo.com/transparency/pairing
-		transparency.logPairing(count, tree);
+		transparency.logPairing(count, tree, support);
 		score.compute(this);
 		// https://sourceafis.machinezoo.com/transparency/score
 		transparency.logScore(score);
@@ -144,6 +168,11 @@ class MatchBuffer {
 			tree[i] = null;
 		}
 		count = 0;
+		if (reportSupport) {
+			for (MinutiaPair pair : support)
+				release(pair);
+			support.clear();
+		}
 	}
 	private void collectEdges() {
 		MinutiaPair reference = tree[count - 1];
@@ -154,32 +183,29 @@ class MatchBuffer {
 			pair.candidateRef = reference.candidate;
 			if (byCandidate[pair.candidate] == null && byProbe[pair.probe] == null)
 				queue.add(pair);
-			else {
-				if (byProbe[pair.probe] != null && byProbe[pair.probe].candidate == pair.candidate)
-					addSupportingEdge(pair);
-				release(pair);
-			}
+			else
+				support(pair);
 		}
 	}
 	private List<MinutiaPair> matchPairs(NeighborEdge[] probeStar, NeighborEdge[] candidateStar) {
-		double complementaryAngleError = Angle.complementary(Parameters.maxAngleError);
+		double complementaryAngleError = DoubleAngle.complementary(Parameters.MAX_ANGLE_ERROR);
 		List<MinutiaPair> results = new ArrayList<>();
 		int start = 0;
 		int end = 0;
 		for (int candidateIndex = 0; candidateIndex < candidateStar.length; ++candidateIndex) {
 			NeighborEdge candidateEdge = candidateStar[candidateIndex];
-			while (start < probeStar.length && probeStar[start].length < candidateEdge.length - Parameters.maxDistanceError)
+			while (start < probeStar.length && probeStar[start].length < candidateEdge.length - Parameters.MAX_DISTANCE_ERROR)
 				++start;
 			if (end < start)
 				end = start;
-			while (end < probeStar.length && probeStar[end].length <= candidateEdge.length + Parameters.maxDistanceError)
+			while (end < probeStar.length && probeStar[end].length <= candidateEdge.length + Parameters.MAX_DISTANCE_ERROR)
 				++end;
 			for (int probeIndex = start; probeIndex < end; ++probeIndex) {
 				NeighborEdge probeEdge = probeStar[probeIndex];
-				double referenceDiff = Angle.difference(probeEdge.referenceAngle, candidateEdge.referenceAngle);
-				if (referenceDiff <= Parameters.maxAngleError || referenceDiff >= complementaryAngleError) {
-					double neighborDiff = Angle.difference(probeEdge.neighborAngle, candidateEdge.neighborAngle);
-					if (neighborDiff <= Parameters.maxAngleError || neighborDiff >= complementaryAngleError) {
+				double referenceDiff = DoubleAngle.difference(probeEdge.referenceAngle, candidateEdge.referenceAngle);
+				if (referenceDiff <= Parameters.MAX_ANGLE_ERROR || referenceDiff >= complementaryAngleError) {
+					double neighborDiff = DoubleAngle.difference(probeEdge.neighborAngle, candidateEdge.neighborAngle);
+					if (neighborDiff <= Parameters.MAX_ANGLE_ERROR || neighborDiff >= complementaryAngleError) {
 						MinutiaPair pair = allocate();
 						pair.probe = probeEdge.neighbor;
 						pair.candidate = candidateEdge.neighbor;
@@ -192,12 +218,8 @@ class MatchBuffer {
 		return results;
 	}
 	private void skipPaired() {
-		while (!queue.isEmpty() && (byProbe[queue.peek().probe] != null || byCandidate[queue.peek().candidate] != null)) {
-			MinutiaPair pair = queue.remove();
-			if (byProbe[pair.probe] != null && byProbe[pair.probe].candidate == pair.candidate)
-				addSupportingEdge(pair);
-			release(pair);
-		}
+		while (!queue.isEmpty() && (byProbe[queue.peek().probe] != null || byCandidate[queue.peek().candidate] != null))
+			support(queue.remove());
 	}
 	private void addPair(MinutiaPair pair) {
 		tree[count] = pair;
@@ -205,11 +227,16 @@ class MatchBuffer {
 		byCandidate[pair.candidate] = pair;
 		++count;
 	}
-	private void addSupportingEdge(MinutiaPair pair) {
-		++byProbe[pair.probe].supportingEdges;
-		++byProbe[pair.probeRef].supportingEdges;
-		// https://sourceafis.machinezoo.com/transparency/pairing
-		transparency.logSupportingEdge(pair);
+	private void support(MinutiaPair pair) {
+		if (byProbe[pair.probe] != null && byProbe[pair.probe].candidate == pair.candidate) {
+			++byProbe[pair.probe].supportingEdges;
+			++byProbe[pair.probeRef].supportingEdges;
+			if (reportSupport)
+				support.add(pair);
+			else
+				release(pair);
+		} else
+			release(pair);
 	}
 	private MinutiaPair allocate() {
 		if (pooled > 0) {

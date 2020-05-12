@@ -1,21 +1,21 @@
-// Part of SourceAFIS: https://sourceafis.machinezoo.com
+// Part of SourceAFIS for Java: https://sourceafis.machinezoo.com/java
 package com.machinezoo.sourceafis;
 
-class Angle {
+class DoubleAngle {
 	static final double PI2 = 2 * Math.PI;
-	static final double invPI2 = 1.0 / PI2;
-	static final double halfPI = 0.5 * Math.PI;
-	static Point toVector(double angle) {
-		return new Point(Math.cos(angle), Math.sin(angle));
+	static final double INV_PI2 = 1.0 / PI2;
+	static final double HALF_PI = 0.5 * Math.PI;
+	static DoublePoint toVector(double angle) {
+		return new DoublePoint(Math.cos(angle), Math.sin(angle));
 	}
-	static double atan(Point vector) {
+	static double atan(DoublePoint vector) {
 		double angle = Math.atan2(vector.y, vector.x);
 		return angle >= 0 ? angle : angle + PI2;
 	}
-	static double atan(Cell vector) {
+	static double atan(IntPoint vector) {
 		return atan(vector.toPoint());
 	}
-	static double atan(Cell center, Cell point) {
+	static double atan(IntPoint center, IntPoint point) {
 		return atan(point.minus(center));
 	}
 	static double toOrientation(double angle) {
@@ -32,7 +32,7 @@ class Angle {
 		return PI2 * (2 * bucket + 1) / (2 * resolution);
 	}
 	static int quantize(double angle, int resolution) {
-		int result = (int)(angle * invPI2 * resolution);
+		int result = (int)(angle * INV_PI2 * resolution);
 		if (result < 0)
 			return 0;
 		else if (result >= resolution)
@@ -54,5 +54,8 @@ class Angle {
 	static double complementary(double angle) {
 		double complement = PI2 - angle;
 		return complement < PI2 ? complement : complement - PI2;
+	}
+	static boolean normalized(double angle) {
+		return angle >= 0 && angle < PI2;
 	}
 }

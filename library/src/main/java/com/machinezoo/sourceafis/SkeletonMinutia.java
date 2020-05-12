@@ -1,16 +1,12 @@
-// Part of SourceAFIS: https://sourceafis.machinezoo.com
+// Part of SourceAFIS for Java: https://sourceafis.machinezoo.com/java
 package com.machinezoo.sourceafis;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
-import java8.util.stream.StreamSupport;
+import java.util.*;
 
 class SkeletonMinutia {
-	final Cell position;
+	final IntPoint position;
 	final List<SkeletonRidge> ridges = new ArrayList<>();
-	SkeletonMinutia(Cell position) {
+	SkeletonMinutia(IntPoint position) {
 		this.position = position;
 	}
 	void attachStart(SkeletonRidge ridge) {
@@ -25,15 +21,6 @@ class SkeletonMinutia {
 			if (ridge.start() == this)
 				ridge.start(null);
 		}
-	}
-	void write(ByteBuffer buffer) {
-		for (SkeletonRidge ridge : ridges)
-			if (ridge.points instanceof CircularList)
-				ridge.write(buffer);
-	}
-	int serializedSize() {
-		// src: return ridges.stream().filter(r -> r.points instanceof CircularList).mapToInt(r -> r.serializedSize()).sum();
-		return StreamSupport.stream(ridges).filter(r -> r.points instanceof CircularList).mapToInt(SkeletonRidge::serializedSize).sum();
 	}
 	@Override public String toString() {
 		return String.format("%s*%d", position.toString(), ridges.size());
