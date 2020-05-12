@@ -54,7 +54,7 @@ public class FingerprintTemplate {
 	 * @see FingerprintTransparency
 	 */
 	public FingerprintTemplate transparency(FingerprintTransparency transparency) {
-		this.transparency = Optional.ofNullable(transparency).orElse(FingerprintTransparency.none);
+		this.transparency = transparency == null ? FingerprintTransparency.none : transparency;
 		return this;
 	}
 	/**
