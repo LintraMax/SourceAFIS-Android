@@ -71,8 +71,8 @@ publishing {
     }
     publications {
         library(MavenPublication) {
-//            groupId 'com.machinezoo.sourceafis'
-//            artifactId 'SourceAFIS-Android'
+            groupId 'com.lintramax'
+            artifactId 'SourceAFIS-Android'
             version getVersionName()
             artifact("$buildDir/outputs/aar/library.aar")
         }
