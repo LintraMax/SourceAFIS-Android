@@ -3,6 +3,7 @@ package com.machinezoo.sourceafis;
 
 import java.nio.*;
 import java.util.*;
+import java8.util.stream.StreamSupport;
 
 class Skeleton {
 	private final FingerprintTransparency logger;
@@ -378,7 +379,7 @@ class Skeleton {
 		return shadow;
 	}
 	ByteBuffer serialize() {
-		ByteBuffer buffer = ByteBuffer.allocate(minutiae.stream().mapToInt(m -> m.serializedSize()).sum());
+		ByteBuffer buffer = ByteBuffer.allocate(StreamSupport.stream(minutiae).mapToInt(m -> m.serializedSize()).sum());
 		for (SkeletonMinutia minutia : minutiae)
 			minutia.write(buffer);
 		buffer.flip();
