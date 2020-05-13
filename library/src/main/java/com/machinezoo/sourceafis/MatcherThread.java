@@ -10,6 +10,8 @@ import java8.util.Comparators;
 import it.unimi.dsi.fastutil.ints.*;
 
 class MatcherThread {
+	private static final int DEFAULT_INITIAL_CAPACITY = 11;
+
 	private static final ThreadLocal<MatcherThread> threads = new ThreadLocal<MatcherThread>() {
 		/*
 		 * ThreadLocal has method withInitial() that is more convenient,
@@ -25,7 +27,7 @@ class MatcherThread {
 	ImmutableTemplate candidate;
 	private MinutiaPair[] pool = new MinutiaPair[1];
 	private int pooled;
-	private PriorityQueue<MinutiaPair> queue = new PriorityQueue<>(Comparators.comparing(p -> p.distance));
+	private PriorityQueue<MinutiaPair> queue = new PriorityQueue<>(DEFAULT_INITIAL_CAPACITY, Comparators.comparing(p -> p.distance));
 	int count;
 	MinutiaPair[] tree = new MinutiaPair[1];
 	private MinutiaPair[] byProbe = new MinutiaPair[1];
