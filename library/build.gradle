@@ -29,7 +29,6 @@ dependencies {
     implementation 'it.unimi.dsi:fastutil:7.2.1'
 
     implementation 'com.machinezoo.noexception:noexception:1.4.4'
-    implementation 'com.machinezoo.fingerprintio:fingerprintio:0.1.1'
     implementation 'commons-io:commons-io:2.6'
 
     implementation 'net.sourceforge.streamsupport:streamsupport:1.6.1'
