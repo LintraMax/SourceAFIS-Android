@@ -7,6 +7,10 @@ import org.slf4j.*;
 import com.machinezoo.fingerprintio.common.*;
 import com.machinezoo.fingerprintio.utils.*;
 
+import java8.util.Comparators;
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
+
 /*
  * Object model of ANSI INCITS 378-2004 template.
  */
@@ -129,7 +133,8 @@ public class Ansi378Template {
 	}
 	private int measure() {
 		int length = 26;
-		length += fingerprints.stream().mapToInt(Ansi378Fingerprint::measure).sum();
+		// src: length += fingerprints.stream().mapToInt(Ansi378Fingerprint::measure).sum();
+		length += StreamSupport.stream(fingerprints).mapToInt(Ansi378Fingerprint::measure).sum();
 		return length < 0x10000 ? length : length + 4;
 	}
 	private void validate() {
@@ -143,15 +148,16 @@ public class Ansi378Template {
 		Validate.int8(fingerprints.size(), "There cannot be more than 255 fingerprints.");
 		for (Ansi378Fingerprint fp : fingerprints)
 			fp.validate(width, height);
-		if (fingerprints.size() != fingerprints.stream().mapToInt(fp -> (fp.position.ordinal() << 16) + fp.view).distinct().count())
+		// src: if (fingerprints.size() != fingerprints.stream().mapToInt(fp -> (fp.position.ordinal() << 16) + fp.view).distinct().count())
+		if (fingerprints.size() != StreamSupport.stream(fingerprints).mapToInt(fp -> (fp.position.ordinal() << 16) + fp.view).distinct().count())
 			throw new TemplateFormatException("Every fingerprint must have a unique combination of finger position and view offset.");
-		fingerprints.stream()
-			.collect(groupingBy(fp -> fp.position))
-			.values().stream()
+		StreamSupport.stream(StreamSupport.stream(fingerprints)
+			.collect(Collectors.groupingBy(fp -> fp.position))
+			.values())
 			.forEach(l -> {
 				for (int i = 0; i < l.size(); ++i) {
 					Validate.range(l.get(i).view, 0, l.size() - 1, "Fingerprint view numbers must be assigned contiguously, starting from zero.");
-					if (!l.equals(l.stream().sorted(Comparator.comparingInt(fp -> fp.view)).collect(toList())))
+					if (!l.equals(StreamSupport.stream(l).sorted(Comparators.comparingInt(fp -> fp.view)).collect(Collectors.toList())))
 						throw new TemplateFormatException("Fingerprints with the same finger position must be sorted by view number.");
 				}
 			});

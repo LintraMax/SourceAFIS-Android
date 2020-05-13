@@ -2,12 +2,16 @@
 package com.machinezoo.fingerprintio.ansi378;
 
 import java.util.*;
-import java.util.function.*;
+import java8.util.stream.StreamSupport;
+
 import org.slf4j.*;
 import com.machinezoo.fingerprintio.common.*;
 import com.machinezoo.fingerprintio.utils.*;
 
 public class Ansi378v2009Am1Fingerprint {
+	interface Consumer<T> {
+		void accept(T t);
+	}
 	private static final Logger logger = LoggerFactory.getLogger(Ansi378v2009Am1Fingerprint.class);
 	public Ansi378v2009Am1Position position = Ansi378v2009Am1Position.UNKNOWN;
 	public int view;
@@ -114,7 +118,8 @@ public class Ansi378v2009Am1Fingerprint {
 		Validate.int16(extensionBytes(), "Total size of all extension blocks must a 16-bit number.");
 	}
 	private int extensionBytes() {
-		int bytes = extensions.stream().mapToInt(Ansi378Extension::measure).sum();
+		// src: int bytes = extensions.stream().mapToInt(Ansi378Extension::measure).sum();
+		int bytes = StreamSupport.stream(extensions).mapToInt(Ansi378Extension::measure).sum();
 		if (counts != null)
 			bytes += counts.measure();
 		if (coredelta != null)

@@ -5,6 +5,8 @@ import java.util.*;
 import com.machinezoo.fingerprintio.common.*;
 import com.machinezoo.fingerprintio.utils.*;
 
+import java8.util.stream.StreamSupport;
+
 public class Ansi378CoreDeltaExtension {
 	static final int IDENTIFIER = 2;
 	public List<Ansi378Core> cores = new ArrayList<>();
@@ -51,12 +53,14 @@ public class Ansi378CoreDeltaExtension {
 	void validate(int width, int height) {
 		for (Ansi378Core core : cores)
 			core.validate(width, height);
-		if (hasCoreAngles() && cores.stream().anyMatch(c -> c.angle == null))
+		// src: if (hasCoreAngles() && cores.stream().anyMatch(c -> c.angle == null))
+		if (hasCoreAngles() && StreamSupport.stream(cores).anyMatch(c -> c.angle == null))
 			throw new TemplateFormatException("Inconsistent core angle information. Either all cores should have angle or none should.");
 		Validate.int4(cores.size(), "There can be no more than 15 cores.");
 		for (Ansi378Delta delta : deltas)
 			delta.validate(width, height);
-		if (hasDeltaAngles() && deltas.stream().anyMatch(d -> d.angles == null))
+		// src: if (hasDeltaAngles() && deltas.stream().anyMatch(d -> d.angles == null))
+		if (hasDeltaAngles() && StreamSupport.stream(deltas).anyMatch(d -> d.angles == null))
 			throw new TemplateFormatException("Inconsistent delta angle information. Either all deltas should have angles or none should.");
 		Validate.int4(deltas.size(), "There can be no more than 15 deltas.");
 	}

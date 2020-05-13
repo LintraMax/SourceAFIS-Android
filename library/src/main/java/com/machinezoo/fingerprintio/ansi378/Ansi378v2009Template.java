@@ -8,6 +8,10 @@ import org.slf4j.*;
 import com.machinezoo.fingerprintio.common.*;
 import com.machinezoo.fingerprintio.utils.*;
 
+import java8.util.Comparators;
+import java8.util.stream.Collectors;
+import java8.util.stream.StreamSupport;
+
 /*
  * Object model of ANSI INCITS 378-2009 template.
  */
@@ -100,7 +104,8 @@ public class Ansi378v2009Template {
 		return new Ansi378v2009Am1Template(serialized);
 	}
 	private int measure() {
-		return 21 + fingerprints.stream().mapToInt(Ansi378v2009Fingerprint::measure).sum();
+		// src: return 21 + fingerprints.stream().mapToInt(Ansi378v2009Fingerprint::measure).sum();
+		return 21 + StreamSupport.stream(fingerprints).mapToInt(Ansi378v2009Fingerprint::measure).sum();
 	}
 	private void validate() {
 		Validate.nonzero16(vendorId, "Vendor ID must be a non-zero unsigned 16-bit number.");
@@ -109,15 +114,15 @@ public class Ansi378v2009Template {
 		Validate.int8(fingerprints.size(), "There cannot be more than 255 fingerprints.");
 		for (Ansi378v2009Fingerprint fp : fingerprints)
 			fp.validate();
-		if (fingerprints.size() != fingerprints.stream().map(fp -> (fp.position.ordinal() << 16) + fp.view).distinct().count())
+		if (fingerprints.size() != StreamSupport.stream(fingerprints).map(fp -> (fp.position.ordinal() << 16) + fp.view).distinct().count())
 			throw new TemplateFormatException("Every fingerprint must have a unique combination of finger position and view offset.");
-		fingerprints.stream()
-			.collect(groupingBy(fp -> fp.position))
-			.values().stream()
+		StreamSupport.stream(StreamSupport.stream(fingerprints)
+			.collect(Collectors.groupingBy(fp -> fp.position))
+			.values())
 			.forEach(l -> {
 				for (int i = 0; i < l.size(); ++i) {
 					Validate.range(l.get(i).view, 0, l.size() - 1, "Fingerprint view numbers must be assigned contiguously, starting from zero.");
-					if (!l.equals(l.stream().sorted(Comparator.comparingInt(fp -> fp.view)).collect(toList())))
+					if (!l.equals(StreamSupport.stream(l).sorted(Comparators.comparingInt(fp -> fp.view)).collect(Collectors.toList())))
 						throw new TemplateFormatException("Fingerprints with the same finger position must be sorted by view number.");
 					if (fingerprints.indexOf(l.get(0)) + l.size() - 1 != fingerprints.indexOf(l.get(l.size() - 1)))
 						throw new TemplateFormatException("Fingerprints with the same finger position must be listed in the template together.");

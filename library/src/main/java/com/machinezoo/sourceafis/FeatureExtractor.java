@@ -3,7 +3,11 @@ package com.machinezoo.sourceafis;
 
 import static java.util.stream.Collectors.*;
 import java.util.*;
-import java.util.stream.*;
+
+import java8.util.J8Arrays;
+import java8.util.stream.*;
+import java8.util.Comparators;
+import java8.util.Lists;
 
 class FeatureExtractor {
 	static MutableTemplate extract(DoubleMatrix raw, double dpi) {
@@ -175,11 +179,19 @@ class FeatureExtractor {
 		List<Double> sortedContrast = new ArrayList<>();
 		for (IntPoint block : contrast.size())
 			sortedContrast.add(contrast.get(block));
-		sortedContrast.sort(Comparator.<Double>naturalOrder().reversed());
+
+		// src: sortedContrast.sort(Comparator.<Double>naturalOrder().reversed());
+		Comparator<Double> comparator = Comparators.naturalOrder();
+		comparator = Comparators.reversed(comparator);
+		Lists.sort(sortedContrast, comparator);
+
 		int pixelsPerBlock = blocks.pixels.area() / blocks.primary.blocks.area();
 		int sampleCount = Math.min(sortedContrast.size(), Parameters.RELATIVE_CONTRAST_SAMPLE / pixelsPerBlock);
 		int consideredBlocks = Math.max((int)Math.round(sampleCount * Parameters.RELATIVE_CONTRAST_PERCENTILE), 1);
-		double averageContrast = sortedContrast.stream().mapToDouble(n -> n).limit(consideredBlocks).average().getAsDouble();
+
+		// src: double averageContrast = sortedContrast.stream().mapToDouble(n -> n).limit(consideredBlocks).average().getAsDouble();
+		double averageContrast = StreamSupport.stream(sortedContrast).mapToDouble(n -> n).limit(consideredBlocks).average().getAsDouble();
+
 		double limit = averageContrast * Parameters.MIN_RELATIVE_CONTRAST;
 		BooleanMatrix result = new BooleanMatrix(blocks.primary.blocks);
 		for (IntPoint block : blocks.primary.blocks)
@@ -192,7 +204,10 @@ class FeatureExtractor {
 	private static BooleanMatrix vote(BooleanMatrix input, BooleanMatrix mask, int radius, double majority, int borderDistance) {
 		IntPoint size = input.size();
 		IntRect rect = new IntRect(borderDistance, borderDistance, size.x - 2 * borderDistance, size.y - 2 * borderDistance);
-		int[] thresholds = IntStream.range(0, Integers.sq(2 * radius + 1) + 1).map(i -> (int)Math.ceil(majority * i)).toArray();
+
+		// src: int[] thresholds = IntStream.range(0, Integers.sq(2 * radius + 1) + 1).map(i -> (int)Math.ceil(majority * i)).toArray();
+		int[] thresholds = IntStreams.range(0, Integers.sq(2 * radius + 1) + 1).map(i -> (int)Math.ceil(majority * i)).toArray();
+
 		IntMatrix counts = new IntMatrix(size);
 		BooleanMatrix output = new BooleanMatrix(size);
 		for (int y = rect.top(); y < rect.bottom(); ++y) {
@@ -329,7 +344,8 @@ class FeatureExtractor {
 					double angle = random.next() * Math.PI;
 					double distance = Doubles.interpolateExponential(Parameters.MIN_ORIENTATION_RADIUS, Parameters.MAX_ORIENTATION_RADIUS, random.next());
 					sample.offset = DoubleAngle.toVector(angle).multiply(distance).round();
-				} while (sample.offset.equals(IntPoint.ZERO) || sample.offset.y < 0 || Arrays.stream(orientations).limit(j).anyMatch(o -> o.offset.equals(sample.offset)));
+				// src: } while (sample.offset.equals(IntPoint.ZERO) || sample.offset.y < 0 || Arrays.stream(orientations).limit(j).anyMatch(o -> o.offset.equals(sample.offset)));
+				} while (sample.offset.equals(IntPoint.ZERO) || sample.offset.y < 0 || J8Arrays.stream(orientations).limit(j).anyMatch(o -> o.offset.equals(sample.offset)));
 				sample.orientation = DoubleAngle.toVector(DoubleAngle.add(DoubleAngle.toOrientation(DoubleAngle.atan(sample.offset.toPoint())), Math.PI));
 			}
 		}
@@ -549,22 +565,38 @@ class FeatureExtractor {
 				minutiae.add(new MutableMinutia(sminutia.position, sminutia.ridges.get(0).direction(), type));
 	}
 	private static void maskMinutiae(List<MutableMinutia> minutiae, BooleanMatrix mask) {
+		/* src:
 		minutiae.removeIf(minutia -> {
 			IntPoint arrow = DoubleAngle.toVector(minutia.direction).multiply(-Parameters.MASK_DISPLACEMENT).round();
 			return !mask.get(minutia.position.plus(arrow), false);
 		});
+		 */
+		for (int i = minutiae.size() - 1; i >= 0; i--) {
+			MutableMinutia minutia = minutiae.get(i);
+			IntPoint arrow = DoubleAngle.toVector(minutia.direction).multiply(-Parameters.MASK_DISPLACEMENT).round();
+			if (!mask.get(minutia.position.plus(arrow), false))
+				minutiae.remove(i);
+		}
 	}
 	private static void removeMinutiaClouds(List<MutableMinutia> minutiae) {
 		int radiusSq = Integers.sq(Parameters.MINUTIA_CLOUD_RADIUS);
+		/* src:
 		minutiae.removeAll(minutiae.stream()
 			.filter(minutia -> Parameters.MAX_CLOUD_SIZE < minutiae.stream()
 				.filter(neighbor -> neighbor.position.minus(minutia.position).lengthSq() <= radiusSq)
 				.count() - 1)
 			.collect(toList()));
+		 */
+		minutiae.removeAll(StreamSupport.stream(minutiae)
+				.filter(minutia -> Parameters.MAX_CLOUD_SIZE < StreamSupport.stream(minutiae)
+						.filter(neighbor -> neighbor.position.minus(minutia.position).lengthSq() <= radiusSq)
+						.count() - 1)
+				.collect(Collectors.toList()));
 	}
 	private static List<MutableMinutia> limitTemplateSize(List<MutableMinutia> minutiae) {
 		if (minutiae.size() <= Parameters.MAX_MINUTIAE)
 			return minutiae;
+		/* src:
 		return minutiae.stream()
 			.sorted(Comparator.<MutableMinutia>comparingInt(
 				minutia -> minutiae.stream()
@@ -575,5 +607,17 @@ class FeatureExtractor {
 				.reversed())
 			.limit(Parameters.MAX_MINUTIAE)
 			.collect(toList());
+		 */
+		Comparator<MutableMinutia> comparator = Comparators.comparingInt(
+				minutia -> StreamSupport.stream(minutiae)
+						.mapToInt(neighbor -> minutia.position.minus(neighbor.position).lengthSq())
+						.sorted()
+						.skip(Parameters.SORT_BY_NEIGHBOR)
+						.findFirst().orElse(Integer.MAX_VALUE));
+		comparator = Comparators.reversed(comparator);
+		return StreamSupport.stream(minutiae)
+				.sorted(comparator)
+				.limit(Parameters.MAX_MINUTIAE)
+				.collect(Collectors.toList());
 	}
 }
