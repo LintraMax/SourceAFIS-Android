@@ -37,7 +37,8 @@ public class FingerprintCompatibility {
 		PlatformCheck.run();
 	}
 	private static final Logger logger = LoggerFactory.getLogger(FingerprintCompatibility.class);
-	private static String version = new String(PlatformCheck.resource("version.txt"), StandardCharsets.UTF_8).trim();
+	// src: private static String version = new String(PlatformCheck.resource("version.txt"), StandardCharsets.UTF_8).trim();
+	private static String version = BuildConfig.VERSION_NAME;
 	/**
 	 * Gets version of the currently running SourceAFIS.
 	 * This is useful during upgrades when the application has to deal
