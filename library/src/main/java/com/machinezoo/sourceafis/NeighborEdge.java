@@ -3,6 +3,9 @@ package com.machinezoo.sourceafis;
 
 import java.util.*;
 
+import java8.util.Comparators;
+import java8.util.Lists;
+
 class NeighborEdge extends EdgeShape {
 	final int neighbor;
 	NeighborEdge(ImmutableMinutia[] minutiae, int reference, int neighbor) {
@@ -26,7 +29,11 @@ class NeighborEdge extends EdgeShape {
 				if (neighbor != reference && referencePosition.minus(minutiae[neighbor].position).lengthSq() <= maxSqDistance)
 					star.add(new NeighborEdge(minutiae, reference, neighbor));
 			}
-			star.sort(Comparator.<NeighborEdge>comparingInt(e -> e.length).thenComparingInt(e -> e.neighbor));
+			// src: star.sort(Comparator.<NeighborEdge>comparingInt(e -> e.length).thenComparingInt(e -> e.neighbor));
+			Comparator<NeighborEdge> comparator = Comparators.comparingInt(e -> e.length);
+			comparator = Comparators.thenComparingInt(comparator, e -> e.neighbor);
+			Lists.sort(star, comparator);
+
 			while (star.size() > Parameters.EDGE_TABLE_NEIGHBORS)
 				star.remove(star.size() - 1);
 			edges[reference] = star.toArray(new NeighborEdge[star.size()]);
