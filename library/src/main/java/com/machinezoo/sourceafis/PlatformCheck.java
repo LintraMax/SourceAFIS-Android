@@ -48,7 +48,8 @@ class PlatformCheck {
 	static void run() {
 	}
 	static byte[] resource(String filename) {
-		return Exceptions.wrap(ex -> new IllegalStateException("Cannot read SourceAFIS resource: " + filename + ". Use proper dependency management tool.", ex)).get(() -> {
+		// src: return Exceptions.wrap(ex -> new IllegalStateException("Cannot read SourceAFIS resource: " + filename + ". Use proper dependency management tool.", ex)).get(() -> {
+		return Exceptions.wrap().get(() -> {
 			/* src:
 			try (InputStream stream = PlatformCheck.class.getResourceAsStream(filename)) {
 				if (stream == null)

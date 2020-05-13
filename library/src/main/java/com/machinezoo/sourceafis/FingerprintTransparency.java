@@ -335,7 +335,8 @@ public abstract class FingerprintTransparency implements AutoCloseable {
 	private static final ObjectMapper mapper = new ObjectMapper(new CBORFactory())
 		.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
 	private byte[] cbor(Object data) {
-		return Exceptions.wrap(IllegalArgumentException::new).get(() -> mapper.writeValueAsBytes(data));
+		// src: return Exceptions.wrap(IllegalArgumentException::new).get(() -> mapper.writeValueAsBytes(data));
+		return Exceptions.wrap().get(() -> mapper.writeValueAsBytes(data));
 	}
 	/*
 	 * Use fast double-checked locking, because this could be called in tight loops.
