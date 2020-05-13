@@ -2,6 +2,7 @@
 package com.machinezoo.sourceafis;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.*;
 import org.apache.commons.io.*;
 import com.machinezoo.noexception.*;
@@ -48,10 +49,17 @@ class PlatformCheck {
 	}
 	static byte[] resource(String filename) {
 		return Exceptions.wrap(ex -> new IllegalStateException("Cannot read SourceAFIS resource: " + filename + ". Use proper dependency management tool.", ex)).get(() -> {
+			/* src:
 			try (InputStream stream = PlatformCheck.class.getResourceAsStream(filename)) {
 				if (stream == null)
 					throw new IllegalStateException("SourceAFIS resource not found: " + filename + ". Use proper dependency management tool.");
 				return IOUtils.toByteArray(stream);
+			}
+			 */
+			try (FileReader file = new FileReader(filename)) {
+				return IOUtils.toByteArray(file, StandardCharsets.UTF_8);
+			} catch (FileNotFoundException ex) {
+				throw new IllegalStateException("SourceAFIS resource not found: " + filename + ". Use proper dependency management tool.");
 			}
 		});
 	}
