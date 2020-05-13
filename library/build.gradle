@@ -21,16 +21,16 @@ android {
 
 dependencies {
     // add dependencies here
-    implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.10.2'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.2'
+    api 'com.google.code.gson:gson:2.8.6'
+    api 'com.fasterxml.jackson.core:jackson-databind:2.10.2'
+    api 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.10.2'
 
     // v8.* and above cannot compile in Android. https://github.com/vigna/fastutil/issues/136
-    implementation 'it.unimi.dsi:fastutil:7.2.1'
+    api 'it.unimi.dsi:fastutil:7.2.1'
 
-    implementation 'com.machinezoo.noexception:noexception:1.4.4'
-    implementation 'com.machinezoo.fingerprintio:fingerprintio:0.1.1'
-    implementation 'commons-io:commons-io:2.6'
+    api 'com.machinezoo.noexception:noexception:1.4.4'
+    api 'com.machinezoo.fingerprintio:fingerprintio:0.1.1'
+    api 'commons-io:commons-io:2.6'
 
-    implementation 'net.sourceforge.streamsupport:streamsupport:1.6.1'
+    api 'net.sourceforge.streamsupport:streamsupport:1.6.1'
 }
