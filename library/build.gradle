@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 
 def getVersionName = { ->
-    return "3.4.0"
+    return "3.4.1"
 }
 
 android {
